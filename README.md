@@ -8,3 +8,5 @@ pip install requests
 pip install pyrogram
 pip install selenium
 ```
+## Required directories
+input, output, bin
