@@ -231,7 +231,7 @@ def delete_messages_from_chat():
         app_telegram.delete_messages(chat_name, message.message_id)
 
 
-"""Vk_side"""
+"""VK SIDE"""
 def vk_side():
     global client_requests
     for event in longpool.listen():
@@ -306,7 +306,7 @@ def vk_side():
                                             new_data["stage"] = "strength"
                                             new_data["race"] = race_list[race_list_rus.index(msg_text)]
                                             client_requests[user_id] = new_data
-                                            send_some_msg(user_id, "OK. Выберите силу фильтра",
+                                            send_some_msg(user_id, "Oк. Выберите силу фильтра",
                                                           keyboard=get_keyboard_strength())
                                         else:
                                             send_some_msg(user_id, "Команда не опознанна. Попробуйте снова",
@@ -339,7 +339,7 @@ def vk_side():
                                                     break
                                                 num += 1
                                         else:
-                                            send_some_msg(user_id, "Команда не опознанна. Попробуйте снова",
+                                            send_some_msg(user_id, "Команда не опознанна. Попробуйте снова.",
                                                           keyboard=get_keyboard_strength())
                                 else:
                                     if msg_text == choice_list[0]:
@@ -369,7 +369,7 @@ proc = Thread(target=vk_side)
 proc.start()
 
 
-"""Telegram_side"""
+"""TELEGRAM SIDE"""
 def run_telegram_side():
     last_time = datetime.now()
     is_client_delete = False
@@ -391,9 +391,7 @@ def run_telegram_side():
             img_name = client_request.get("photo_path")
             input_photo_path = directory_input + img_name  # конечный путь до входного файла
             output_photo_path = directory_output + img_name  # конечный путь до выходного файла
-            print("здесь")
             app_telegram.send_photo(chat_name, input_photo_path)
-            print("здесь")
 
             time.sleep(delay)
 
@@ -473,7 +471,6 @@ def run_telegram_side():
         """В 11 часов удаляем все запросы, которые храняться более 5 часов"""
         now = datetime.now()
         if now.hour == 23 and not is_client_delete:
-            print(now.hour)
             is_client_delete = True
             for user_id in client_requests:
                 delta = now - client_request.get(user_id).get("date_create")
