@@ -19,6 +19,8 @@ from pyrogram import Client, filters
 
 from worker import Worker
 
+import config
+
 
 """Смена расы"""
 race_list = ["Asia", "Africa", "Europe", "India"]
@@ -41,10 +43,10 @@ client_requests = {}
 client_requests_complete = []  # Массив где содержаться user_id с заполненными параметрами
 
 """TELEGRAM"""
-chat_name = ""
-my_name = ""
-api_id = ""
-api_hash = ""
+chat_name = config.chat_name
+my_name = config.chat_name
+api_id = config.api_id
+api_hash = config.api_hash
 session_name = "session_name"
 app_telegram = Client("session1", api_id, api_hash)
 app_telegram.start()
@@ -53,8 +55,8 @@ app_telegram.send_message(chat_name, "/start")
 
 """VK"""
 sys.stdout = sys.stderr
-token = ""
-group_id = ""
+token = config.token
+group_id = config.group_id
 vk_session = vk_api.VkApi(token=token)
 sesstion_api = vk_session.get_api()
 vk_upload = VkUpload(vk_session)
