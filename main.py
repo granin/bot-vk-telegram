@@ -15,8 +15,6 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 
 from PIL import Image
 
-from flask import Flask, request, Response, redirect
-
 from pyrogram import Client, filters
 
 from worker import Worker
