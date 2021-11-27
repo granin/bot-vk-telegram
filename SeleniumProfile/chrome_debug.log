@@ -1,0 +1,23 @@
+[111152:111152:1127/092200.457334:ERROR:sandbox_linux.cc(374)] InitializeSandbox() called with multiple threads in process gpu-process.
+[111116:111116:1127/092200.820706:INFO:CONSOLE(79)] "2021-11-27T09:22:00.819: Initializing adguard", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092200.836670:INFO:CONSOLE(79)] "2021-11-27T09:22:00.835: Starting adguard... Version: 3.6.16. Id: bgnkhhnnamicmpeenaelnjfhikgbkllg", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092200.841158:INFO:CONSOLE(79)] "2021-11-27T09:22:00.839: Uninstall url was set to: https://adguard.com/forward.html?action=adguard_uninstal_ext&from=background&app=browser_extension", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092200.860772:INFO:CONSOLE(79)] "2021-11-27T09:22:00.860: Filters metadata loaded", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092200.914018:INFO:CONSOLE(79)] "2021-11-27T09:22:00.910: Filters i18n metadata loaded", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092201.064619:INFO:CONSOLE(79)] "2021-11-27T09:22:01.063: Filters local script rules loaded", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092201.106391:INFO:CONSOLE(79)] "2021-11-27T09:22:01.102: Filters redirect sources loaded", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092201.106463:INFO:CONSOLE(79)] "2021-11-27T09:22:01.103: Starting loading filter rules from the storage", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092201.320753:INFO:CONSOLE(79)] "2021-11-27T09:22:01.320: Finished loading filter rules from the storage in 217 ms", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092201.321155:INFO:CONSOLE(79)] "2021-11-27T09:22:01.320: Starting request filter initialization. Async=false", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111116:1127/092202.697960:INFO:CONSOLE(79)] "2021-11-27T09:22:02.697: Finished request filter initialization in 1377 ms. Rules count: 92115", source: chrome-extension://bgnkhhnnamicmpeenaelnjfhikgbkllg/lib/utils/log.js (79)
+[111116:111141:1127/092205.592480:ERROR:chrome_browser_main_extra_parts_metrics.cc(230)] crbug.com/1216328: Checking Bluetooth availability started. Please report if there is no report that this ends.
+[111116:111141:1127/092205.592530:ERROR:chrome_browser_main_extra_parts_metrics.cc(233)] crbug.com/1216328: Checking Bluetooth availability ended.
+[111116:111141:1127/092205.592551:ERROR:chrome_browser_main_extra_parts_metrics.cc(236)] crbug.com/1216328: Checking default browser status started. Please report if there is no report that this ends.
+[111116:111141:1127/092205.738539:ERROR:chrome_browser_main_extra_parts_metrics.cc(240)] crbug.com/1216328: Checking default browser status ended.
+[111116:111116:1127/092206.533543:INFO:CONSOLE(301)] "Uncaught TypeError: Cannot read properties of undefined (reading 'Orientation')", source: https://twinstrangers.net/ (301)
+[111116:111116:1127/092207.497862:INFO:CONSOLE(0)] "[DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o", source: https://twinstrangers.net/page/register (0)
+[111116:111116:1127/092207.497946:INFO:CONSOLE(0)] "[DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o", source: https://twinstrangers.net/page/register (0)
+[111116:111116:1127/092211.355250:INFO:CONSOLE(243)] "Sat Jun 16 1990 00:00:00 GMT+0600 (Yekaterinburg Summer Time) 31", source: https://twinstrangers.net/js/functions.js (243)
+[111153:111173:1127/092246.066460:WARNING:sqlite_persistent_store_backend_base.cc(172)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:220 to client_task_runner_.
+[111153:111173:1127/092246.066613:WARNING:sqlite_persistent_store_backend_base.cc(172)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:220 to client_task_runner_.
+[111116:111116:1127/092246.126140:WARNING:pref_notifier_impl.cc(40)] Pref observer for media_router.cast_allow_all_ips found at shutdown.
