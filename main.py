@@ -22,6 +22,9 @@ from worker import Worker
 import config
 
 
+print("spider-man")
+
+
 """Смена расы"""
 race_list = ["Asia", "Africa", "Europe", "India"]
 race_list_rus = ["Азия", "Африка", "Европа", "Индия"]
@@ -382,12 +385,12 @@ def vk_side():
             time.sleep(30)
 
 
-
 proc = Thread(target=vk_side)
 proc.start()
 
-complete = False
+
 """TELEGRAM SIDE"""
+complete = False
 def run_telegram_side():
     global client_requests_complete
     last_time = datetime.now()
@@ -508,5 +511,5 @@ def run_telegram_side():
             complete = True
         time.sleep(30)
 
-print("spider-man")
+
 run_telegram_side()
