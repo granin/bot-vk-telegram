@@ -44,7 +44,6 @@ client_requests_complete = []  # Массив где содержаться user
 
 """TELEGRAM"""
 chat_name = config.chat_name
-my_name = config.chat_name
 api_id = config.api_id
 api_hash = config.api_hash
 session_name = "session_name"
@@ -251,7 +250,7 @@ def vk_side():
                             photo_url = get_url(attach, msg_id)
                             if not is_member:
                                 send_some_msg(user_id,
-                                              'К сожалению, мы не можем обработать ваш запрос, пока вы не подпишитесь на нашу группу)')
+                                              config.not_subscribed)
                             else:
                                 print("Новое сообщение vk_side")
                                 """Если прислано фото, возвращаемся к начальной стадии"""
@@ -266,12 +265,12 @@ def vk_side():
                                             "photo_path": name_img
                                         }
                                     }
-                                    send_some_msg(user_id, "Выберите действие.", keyboard=get_keyboard_choice())
+                                    send_some_msg(user_id, config.select_action, keyboard=get_keyboard_choice())
                                 else:
                                     if user_id in client_requests:
                                         if msg_text == "Отмена":
                                             delete_client_request(user_id)
-                                            send_some_msg(user_id, "Пожалуйста, отправьте фото.")
+                                            send_some_msg(user_id, config.send_photo)
                                         else:
                                             """Проверяем какое действие выбрал клиент"""
                                             if client_requests.get(user_id).get("choice") == "find_clone":
@@ -297,12 +296,11 @@ def vk_side():
                                                             break
                                                     if not sex:
                                                         send_some_msg(user_id,
-                                                                      'Пожалуйста, укажите ваш пол ("Мужской" - искать близнецов среди мужчин, "Женский" - среди женщин).')
+                                                                      config.set_sex)
                                                     else:
                                                         photo_url = client_requests.get(user_id).get("photo_url")
                                                         send_some_msg(user_id,
-                                                                      'Ваша заявка принята\nВаш номер в очереди: %s' % (
-                                                                              len(queue.queue) + 1))
+                                                                      config.request_ok + str(len(queue.queue) + 1))
                                                         w = Worker(sesstion_api, user_id, photo_url, sex, year)
                                                         queue.add_queue(w)
                                                         delete_client_request(user_id)
@@ -314,11 +312,11 @@ def vk_side():
                                                         new_data["stage"] = "strength"
                                                         new_data["race"] = race_list[race_list_rus.index(msg_text)]
                                                         client_requests[user_id] = new_data
-                                                        send_some_msg(user_id, "Oк. Выберите силу фильтра.",
+                                                        send_some_msg(user_id, config.set_strength,
                                                                       keyboard=get_keyboard_strength())
                                                     else:
                                                         send_some_msg(user_id,
-                                                                      "Команда не опознанна. Попробуйте снова.",
+                                                                      config.not_recognized,
                                                                       keyboard=get_keyboard_race())
                                                 elif client_requests.get(user_id).get("stage") == "strength":
                                                     if msg_text in strength_list_rus:
@@ -346,13 +344,13 @@ def vk_side():
                                                         for i in client_requests_complete:
                                                             if i.get("user_id") == user_id:
                                                                 send_some_msg(user_id,
-                                                                              "Ваша заявка принята\nВаш номер в очереди: " + str(
+                                                                              config.request_ok + str(
                                                                                   len(client_requests_complete) + 1 - num))
                                                                 break
                                                             num += 1
                                                     else:
                                                         send_some_msg(user_id,
-                                                                      "Команда не опознанна. Попробуйте снова.",
+                                                                      config.not_recognized,
                                                                       keyboard=get_keyboard_strength())
                                             else:
                                                 if msg_text == choice_list[0]:
@@ -361,7 +359,7 @@ def vk_side():
                                                     new_data["stage"] = "race"
                                                     new_data["category"] = "Race"
                                                     client_requests[user_id] = new_data
-                                                    send_some_msg(user_id, "Oк. Выберите рассу.",
+                                                    send_some_msg(user_id, config.set_race,
                                                                   keyboard=get_keyboard_race())
                                                     is_choice = True
                                                 if msg_text == choice_list[1]:
@@ -370,17 +368,18 @@ def vk_side():
                                                     new_data["stage"] = "sex"
                                                     client_requests[user_id] = new_data
                                                     send_some_msg(user_id,
-                                                                  'Пожалуйста, укажите ваш пол ("Мужской" - искать близнецов среди мужчин, "Женский" - среди женщин).',
+                                                                  config.set_sex,
                                                                   keyboard=get_keyboard_sex())
                                                     is_choice = True
                                                 if not is_choice:
-                                                    send_some_msg(user_id, "Выберите действие.",
+                                                    send_some_msg(user_id, config.select_action,
                                                                   keyboard=get_keyboard_choice())
                                     else:
-                                        send_some_msg(user_id, "Пожалуйста, отправьте фото.")
-        except Exception:
+                                        send_some_msg(user_id, config.send_photo)
+        except Exception as e:
+            print(e)
             print("Переподключение vk_side")
-            time.sleep(60)
+            time.sleep(30)
 
 
 
@@ -403,7 +402,7 @@ def run_telegram_side():
         while True:
             """Проверяет есть ли клиенты в очереди, если есть, то обрабатывает запрос"""
             if len(client_requests_complete) != 0 and get_time_delta() >= 30:
-                print("Обработка клиент(telegram_side)")
+                print("Обработка запроса (telegram_side)")
                 client_request = client_requests_complete[0]
                 user_id = client_request.get("user_id")
                 category = client_request.get("category")
@@ -423,7 +422,7 @@ def run_telegram_side():
                 while not complete:
                     """Условие если запросов для одного клиета слишком много, выдать ошибку"""
                     if series > 85:
-                        send_some_msg(user_id, "Невозможно выполнить запрос, произошел программный сбой.")
+                        send_some_msg(user_id, config.error)
                         delete_client_request_complete(client_request, input_photo_path)
                         delete_messages_from_chat()
                         last_time = datetime.now()
@@ -456,7 +455,7 @@ def run_telegram_side():
 
                                 """Условия для обработки ошибки"""
                                 if "not found" in message.text:
-                                    send_some_msg(user_id, "Лицо не найдено! Пожалуйста, используйте другое фото.")
+                                    send_some_msg(user_id, config.face_not_found)
                                     delete_client_request_complete(client_request, input_photo_path)
                                     complete = True
                                     delete_messages_from_chat()
@@ -464,7 +463,7 @@ def run_telegram_side():
                                     last_time = datetime.now()
                                     break
                                 elif "Timeout" in message.text and "not recognized":
-                                    send_some_msg(user_id, "Невозможно выполнить запрос, произошел программный сбой.")
+                                    send_some_msg(user_id, config.error)
                                     delete_client_request_complete(client_request, input_photo_path)
                                     complete = True
                                     delete_messages_from_chat()
@@ -500,9 +499,14 @@ def run_telegram_side():
                         delete_client_request(client_request)
             if now.hour != 23:
                 is_client_delete = False
-    except Exception:
+    except Exception as e:
+        print(e)
         print("Переподключение telegram_side")
-        time.sleep(60)
+        if len(client_requests_complete) != 0:
+            send_some_msg(user_id,config.error)
+            delete_client_request_complete(client_request, input_photo_path)
+            complete = True
+        time.sleep(30)
 
 print("spider-man")
 run_telegram_side()
