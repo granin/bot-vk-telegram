@@ -508,4 +508,5 @@ def run_telegram_side():
         print("Переподключение telegram_side")
         time.sleep(60)
 
+print("spider-man")
 run_telegram_side()
