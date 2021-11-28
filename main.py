@@ -253,7 +253,7 @@ def vk_side():
                                 send_some_msg(user_id,
                                               'К сожалению, мы не можем обработать ваш запрос, пока вы не подпишитесь на нашу группу)')
                             else:
-                                print("Обработка клиент(vk_side)")
+                                print("Новое сообщение vk_side")
                                 """Если прислано фото, возвращаемся к начальной стадии"""
                                 if attach_type == 'photo':
                                     img_id = attach
@@ -405,7 +405,6 @@ def run_telegram_side():
             if len(client_requests_complete) != 0 and get_time_delta() >= 30:
                 print("Обработка клиент(telegram_side)")
                 client_request = client_requests_complete[0]
-                print(client_request)
                 user_id = client_request.get("user_id")
                 category = client_request.get("category")
                 race = client_request.get("race")
@@ -421,9 +420,7 @@ def run_telegram_side():
                 complete = False
                 stage = "category"
                 series = 0
-                print(complete)
                 while not complete:
-                    print("plsdfsdaf")
                     """Условие если запросов для одного клиета слишком много, выдать ошибку"""
                     if series > 85:
                         send_some_msg(user_id, "Невозможно выполнить запрос, произошел программный сбой.")
@@ -459,7 +456,6 @@ def run_telegram_side():
 
                                 """Условия для обработки ошибки"""
                                 if "not found" in message.text:
-                                    print("зашел")
                                     send_some_msg(user_id, "Лицо не найдено! Пожалуйста, используйте другое фото.")
                                     delete_client_request_complete(client_request, input_photo_path)
                                     complete = True
