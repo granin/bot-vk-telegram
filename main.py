@@ -240,7 +240,7 @@ def vk_side():
             print("Подключение установлено vk_side")
             for event in longpool.listen():
                 if event.type == VkEventType.MESSAGE_NEW:
-                    if str(event.peer_id) == config.peer_id:
+                    if not event.from_chat:
                         if event.to_me:
                             user_id = event.user_id
                             msg_text = event.text
