@@ -217,6 +217,7 @@ def delete_client_request(user_id, input_photo_path=None, output_photo_path=None
 
 """Функция удаляет законченый процесс пользователя"""
 def delete_client_request_complete(client_request, input_photo_path=None, output_photo_path=None):
+    global client_requests_complete
     client_requests_complete.remove(client_request)
 
     if input_photo_path != None:
@@ -233,144 +234,163 @@ def delete_messages_from_chat():
 
 """VK SIDE"""
 def vk_side():
-    global client_requests
-    for event in longpool.listen():
-        if event.type == VkEventType.MESSAGE_NEW:
-            if event.to_me:
-                user_id = event.user_id
-                msg_text = event.text
-                msg_id = event.message_id
-                is_member = sesstion_api.groups.isMember(group_id=group_id, user_id=user_id)
-                attach = event.attachments.get("attach1")
-                attach_type = event.attachments.get("attach1_type")
-                photo_url = get_url(attach, msg_id)
-                if not is_member:
-                    send_some_msg(user_id,
-                                  'К сожалению, мы не можем обработать ваш запрос, пока вы не подпишитесь на нашу группу)')
-                else:
-                    """Если прислано фото, возвращаемся к начальной стадии"""
-                    if attach_type == 'photo':
-                        img_id = attach
-                        name_img = str(img_id) + ".jpg"
-                        client_requests = {
-                            user_id: {
-                                "stage": "choice",
-                                "date_create": datetime.now(),
-                                "photo_url": photo_url,
-                                "photo_path": name_img
-                            }
-                        }
-                        send_some_msg(user_id, "Выберите действие.", keyboard=get_keyboard_choice())
-                    else:
-                        if user_id in client_requests:
-                            if msg_text == "Отмена":
-                                delete_client_request(user_id)
-                                send_some_msg(user_id, "Пожалуйста, отправьте фото.")
+    while True:
+        try:
+            global client_requests
+            print("Подключение установлено vk_side")
+            for event in longpool.listen():
+                if event.type == VkEventType.MESSAGE_NEW:
+                    if str(event.peer_id) == config.peer_id:
+                        if event.to_me:
+                            user_id = event.user_id
+                            msg_text = event.text
+                            msg_id = event.message_id
+                            is_member = sesstion_api.groups.isMember(group_id=group_id, user_id=user_id)
+                            attach = event.attachments.get("attach1")
+                            attach_type = event.attachments.get("attach1_type")
+                            photo_url = get_url(attach, msg_id)
+                            if not is_member:
+                                send_some_msg(user_id,
+                                              'К сожалению, мы не можем обработать ваш запрос, пока вы не подпишитесь на нашу группу)')
                             else:
-                                """Проверяем какое действие выбрал клиент"""
-                                if client_requests.get(user_id).get("choice") == "find_clone":
-                                    if client_requests.get(user_id).get("stage") == "sex":
-                                        year = re.search(r'\d\d\d\d', msg_text)
-                                        if year:
-                                            year = int(year.group(0))
-                                        else:
-                                            year = 1990
-                                        sex = None
-                                        male_patterns = [r'^М$', r'^М\s', r'\sМ$']
-                                        male_patterns.append(sex_list[0])
-                                        female_patterns = [r'^Ж$', r'^Ж\s', r'\sЖ$', r'^Д$', r'^Д\s', r'\sД$']
-                                        female_patterns.append(sex_list[1])
-                                        for i in male_patterns:
-                                            if re.search(i, msg_text):
-                                                sex = 'm'
-                                                break
-                                        for i in female_patterns:
-                                            if re.search(i, msg_text):
-                                                sex = 'f'
-                                                break
-                                        if not sex:
-                                            send_some_msg(user_id,
-                                                          'Пожалуйста, укажите ваш пол ("Мужской" - искать близнецов среди мужчин, "Женский" - среди женщин).')
-                                        else:
-                                            photo_url = client_requests.get(user_id).get("photo_url")
-                                            send_some_msg(user_id, 'Ваша заявка принята\nВаш номер в очереди: %s' % (
-                                                    len(queue.queue) + 1))
-                                            w = Worker(sesstion_api, user_id, photo_url, sex, year)
-                                            queue.add_queue(w)
-                                            delete_client_request(user_id)
-                                elif client_requests.get(user_id).get("choice") == "change_race":
-                                    """"Проверяем на каком этапе находиться клиент"""
-                                    if client_requests.get(user_id).get("stage") == "race":
-                                        if msg_text in race_list_rus:
-                                            new_data = client_requests.get(user_id)
-                                            new_data["stage"] = "strength"
-                                            new_data["race"] = race_list[race_list_rus.index(msg_text)]
-                                            client_requests[user_id] = new_data
-                                            send_some_msg(user_id, "Oк. Выберите силу фильтра",
-                                                          keyboard=get_keyboard_strength())
-                                        else:
-                                            send_some_msg(user_id, "Команда не опознанна. Попробуйте снова",
-                                                          keyboard=get_keyboard_race())
-                                    elif client_requests.get(user_id).get("stage") == "strength":
-                                        if msg_text in strength_list_rus:
-                                            """Скачиваем отправленную фотографию"""
-                                            photo_url = client_requests.get(user_id).get("photo_url")
-                                            file = requests.get(photo_url)
-                                            name_img = client_requests.get(user_id).get("photo_path")
-                                            out = open(directory_input + name_img, "wb")
-                                            out.write(file.content)
-                                            out.close()
-
-                                            """Добавляем данные"""
-                                            new_data = client_requests.get(user_id)
-                                            new_data["stage"] = "complete"
-                                            new_data["strength"] = strength_list[strength_list_rus.index(msg_text)]
-                                            new_data["user_id"] = user_id
-                                            client_requests_complete.append(new_data) # Добавляем запрос клиента в список законченных запросов
-                                            delete_client_request(user_id) # Удаляем запрос клиента из списка не законченных
-
-                                            """Показываем очередь"""
-                                            num = 1
-                                            for i in client_requests_complete:
-                                                if i.get("user_id") == user_id:
-                                                    send_some_msg(user_id,
-                                                                  "Ваша заявка принята\nВаш номер в очереди: " + str(
-                                                                      len(client_requests_complete) + 1 - num))
-                                                    break
-                                                num += 1
-                                        else:
-                                            send_some_msg(user_id, "Команда не опознанна. Попробуйте снова.",
-                                                          keyboard=get_keyboard_strength())
+                                print("Обработка клиент(vk_side)")
+                                """Если прислано фото, возвращаемся к начальной стадии"""
+                                if attach_type == 'photo':
+                                    img_id = attach
+                                    name_img = str(img_id) + ".jpg"
+                                    client_requests = {
+                                        user_id: {
+                                            "stage": "choice",
+                                            "date_create": datetime.now(),
+                                            "photo_url": photo_url,
+                                            "photo_path": name_img
+                                        }
+                                    }
+                                    send_some_msg(user_id, "Выберите действие.", keyboard=get_keyboard_choice())
                                 else:
-                                    if msg_text == choice_list[0]:
-                                        new_data = client_requests.get(user_id)
-                                        new_data["choice"] = "change_race"
-                                        new_data["stage"] = "race"
-                                        new_data["category"] = "Race"
-                                        client_requests[user_id] = new_data
-                                        send_some_msg(user_id, "Oк. Выберите рассу.", keyboard=get_keyboard_race())
-                                        is_choice = True
-                                    if msg_text == choice_list[1]:
-                                        new_data = client_requests.get(user_id)
-                                        new_data["choice"] = "find_clone"
-                                        new_data["stage"] = "sex"
-                                        client_requests[user_id] = new_data
-                                        send_some_msg(user_id,
-                                                      'Пожалуйста, укажите ваш пол ("Мужской" - искать близнецов среди мужчин, "Женский" - среди женщин).',
-                                                      keyboard=get_keyboard_sex())
-                                        is_choice = True
-                                    if not is_choice:
-                                        send_some_msg(user_id, "Выберите действие.", keyboard=get_keyboard_choice())
-                        else:
-                            send_some_msg(user_id, "Пожалуйста, отправьте фото.")
+                                    if user_id in client_requests:
+                                        if msg_text == "Отмена":
+                                            delete_client_request(user_id)
+                                            send_some_msg(user_id, "Пожалуйста, отправьте фото.")
+                                        else:
+                                            """Проверяем какое действие выбрал клиент"""
+                                            if client_requests.get(user_id).get("choice") == "find_clone":
+                                                if client_requests.get(user_id).get("stage") == "sex":
+                                                    year = re.search(r'\d\d\d\d', msg_text)
+                                                    if year:
+                                                        year = int(year.group(0))
+                                                    else:
+                                                        year = 1990
+                                                    sex = None
+                                                    male_patterns = [r'^М$', r'^М\s', r'\sМ$']
+                                                    male_patterns.append(sex_list[0])
+                                                    female_patterns = [r'^Ж$', r'^Ж\s', r'\sЖ$', r'^Д$', r'^Д\s',
+                                                                       r'\sД$']
+                                                    female_patterns.append(sex_list[1])
+                                                    for i in male_patterns:
+                                                        if re.search(i, msg_text):
+                                                            sex = 'm'
+                                                            break
+                                                    for i in female_patterns:
+                                                        if re.search(i, msg_text):
+                                                            sex = 'f'
+                                                            break
+                                                    if not sex:
+                                                        send_some_msg(user_id,
+                                                                      'Пожалуйста, укажите ваш пол ("Мужской" - искать близнецов среди мужчин, "Женский" - среди женщин).')
+                                                    else:
+                                                        photo_url = client_requests.get(user_id).get("photo_url")
+                                                        send_some_msg(user_id,
+                                                                      'Ваша заявка принята\nВаш номер в очереди: %s' % (
+                                                                              len(queue.queue) + 1))
+                                                        w = Worker(sesstion_api, user_id, photo_url, sex, year)
+                                                        queue.add_queue(w)
+                                                        delete_client_request(user_id)
+                                            elif client_requests.get(user_id).get("choice") == "change_race":
+                                                """"Проверяем на каком этапе находиться клиент"""
+                                                if client_requests.get(user_id).get("stage") == "race":
+                                                    if msg_text in race_list_rus:
+                                                        new_data = client_requests.get(user_id)
+                                                        new_data["stage"] = "strength"
+                                                        new_data["race"] = race_list[race_list_rus.index(msg_text)]
+                                                        client_requests[user_id] = new_data
+                                                        send_some_msg(user_id, "Oк. Выберите силу фильтра.",
+                                                                      keyboard=get_keyboard_strength())
+                                                    else:
+                                                        send_some_msg(user_id,
+                                                                      "Команда не опознанна. Попробуйте снова.",
+                                                                      keyboard=get_keyboard_race())
+                                                elif client_requests.get(user_id).get("stage") == "strength":
+                                                    if msg_text in strength_list_rus:
+                                                        """Скачиваем отправленную фотографию"""
+                                                        photo_url = client_requests.get(user_id).get("photo_url")
+                                                        file = requests.get(photo_url)
+                                                        name_img = client_requests.get(user_id).get("photo_path")
+                                                        out = open(directory_input + name_img, "wb")
+                                                        out.write(file.content)
+                                                        out.close()
+
+                                                        """Добавляем данные"""
+                                                        new_data = client_requests.get(user_id)
+                                                        new_data["stage"] = "complete"
+                                                        new_data["strength"] = strength_list[
+                                                            strength_list_rus.index(msg_text)]
+                                                        new_data["user_id"] = user_id
+                                                        client_requests_complete.append(
+                                                            new_data)  # Добавляем запрос клиента в список законченных запросов
+                                                        delete_client_request(
+                                                            user_id)  # Удаляем запрос клиента из списка не законченных
+
+                                                        """Показываем очередь"""
+                                                        num = 1
+                                                        for i in client_requests_complete:
+                                                            if i.get("user_id") == user_id:
+                                                                send_some_msg(user_id,
+                                                                              "Ваша заявка принята\nВаш номер в очереди: " + str(
+                                                                                  len(client_requests_complete) + 1 - num))
+                                                                break
+                                                            num += 1
+                                                    else:
+                                                        send_some_msg(user_id,
+                                                                      "Команда не опознанна. Попробуйте снова.",
+                                                                      keyboard=get_keyboard_strength())
+                                            else:
+                                                if msg_text == choice_list[0]:
+                                                    new_data = client_requests.get(user_id)
+                                                    new_data["choice"] = "change_race"
+                                                    new_data["stage"] = "race"
+                                                    new_data["category"] = "Race"
+                                                    client_requests[user_id] = new_data
+                                                    send_some_msg(user_id, "Oк. Выберите рассу.",
+                                                                  keyboard=get_keyboard_race())
+                                                    is_choice = True
+                                                if msg_text == choice_list[1]:
+                                                    new_data = client_requests.get(user_id)
+                                                    new_data["choice"] = "find_clone"
+                                                    new_data["stage"] = "sex"
+                                                    client_requests[user_id] = new_data
+                                                    send_some_msg(user_id,
+                                                                  'Пожалуйста, укажите ваш пол ("Мужской" - искать близнецов среди мужчин, "Женский" - среди женщин).',
+                                                                  keyboard=get_keyboard_sex())
+                                                    is_choice = True
+                                                if not is_choice:
+                                                    send_some_msg(user_id, "Выберите действие.",
+                                                                  keyboard=get_keyboard_choice())
+                                    else:
+                                        send_some_msg(user_id, "Пожалуйста, отправьте фото.")
+        except Exception:
+            print("Переподключение vk_side")
+            time.sleep(60)
+
 
 
 proc = Thread(target=vk_side)
 proc.start()
 
-
+complete = False
 """TELEGRAM SIDE"""
 def run_telegram_side():
+    global client_requests_complete
     last_time = datetime.now()
     is_client_delete = False
     delay = 0.8
@@ -378,105 +398,114 @@ def run_telegram_side():
         delta = datetime.now() - last_time
         time_delta = delta.seconds
         return time_delta
+    try:
+        print("Подключение установлено telegram_side")
+        while True:
+            """Проверяет есть ли клиенты в очереди, если есть, то обрабатывает запрос"""
+            if len(client_requests_complete) != 0 and get_time_delta() >= 30:
+                print("Обработка клиент(telegram_side)")
+                client_request = client_requests_complete[0]
+                print(client_request)
+                user_id = client_request.get("user_id")
+                category = client_request.get("category")
+                race = client_request.get("race")
+                strength = client_request.get("strength")
 
-    while True:
-        """Проверяет есть ли клиенты в очереди, если есть, то обрабатывает запрос"""
-        if len(client_requests_complete) != 0 and get_time_delta() >= 30:
-            client_request = client_requests_complete[0]
-            user_id = client_request.get("user_id")
-            category = client_request.get("category")
-            race = client_request.get("race")
-            strength = client_request.get("strength")
+                img_name = client_request.get("photo_path")
+                input_photo_path = directory_input + img_name  # конечный путь до входного файла
+                output_photo_path = directory_output + img_name  # конечный путь до выходного файла
+                app_telegram.send_photo(chat_name, input_photo_path)  # отправляем фото боту
 
-            img_name = client_request.get("photo_path")
-            input_photo_path = directory_input + img_name  # конечный путь до входного файла
-            output_photo_path = directory_output + img_name  # конечный путь до выходного файла
-            app_telegram.send_photo(chat_name, input_photo_path)
+                time.sleep(delay)
+                global complete
+                complete = False
+                stage = "category"
+                series = 0
+                print(complete)
+                while not complete:
+                    print("plsdfsdaf")
+                    """Условие если запросов для одного клиета слишком много, выдать ошибку"""
+                    if series > 85:
+                        send_some_msg(user_id, "Невозможно выполнить запрос, произошел программный сбой.")
+                        delete_client_request_complete(client_request, input_photo_path)
+                        delete_messages_from_chat()
+                        last_time = datetime.now()
+                        complete = True
+                        break
+                    """Запросы на новые сообщения"""
+                    for message in app_telegram.iter_history(chat_name, limit=4):
+                        print(series)
+                        print(stage)
+                        series += 1
+                        if message.from_user.username == chat_name:
+                            if not message.media:
+                                """Условия для отправки параметров боту"""
+                                if "category" in message.text and stage == "category":
+                                    app_telegram.send_message(chat_name, category)
+                                    stage = "filter_type"
+                                    time.sleep(delay)
+                                    break
+                                elif "filter type" in message.text and stage == "filter_type":
+                                    app_telegram.send_message(chat_name, race)
+                                    stage = "filter_strength"
+                                    time.sleep(delay)
+                                    break
+                                elif "strength" in message.text and stage == "filter_strength":
+                                    app_telegram.send_message(chat_name, strength)
+                                    stage = "get_photo"
 
-            time.sleep(delay)
+                                    time.sleep(delay)
+                                    break
 
-            stage = "category"
-            complete = False
-            series = 0
-            while not complete:
-                """Условие если запросов для одного клиета слишком много, выдать ошибку"""
-                if series > 120:
-                    send_some_msg(user_id, "Невозможно выполнить запрос, произошел программный сбой.")
-                    delete_client_request_complete(client_request, input_photo_path)
-                    delete_messages_from_chat()
-                    complete = True
-                    last_time = datetime.now()
-                    break
-                """Запросы на новые сообщения"""
-                for message in app_telegram.iter_history(chat_name, limit=4):
-                    print(series)
-                    print(stage)
-                    series += 1
-                    if message.from_user.username == chat_name:
-                        if not message.media:
-                            """Условия для отправки параметров боту"""
-                            if "category" in message.text and stage == "category":
-                                app_telegram.send_message(chat_name, category)
-                                stage = "filter_type"
-                                time.sleep(delay)
-                                break
-                            elif "filter type" in message.text and stage == "filter_type":
-                                app_telegram.send_message(chat_name, race)
-                                stage = "filter_strength"
-                                time.sleep(delay)
-                                break
-                            elif "strength" in message.text and stage == "filter_strength":
-                                app_telegram.send_message(chat_name, strength)
-                                stage = "get_photo"
+                                """Условия для обработки ошибки"""
+                                if "not found" in message.text:
+                                    print("зашел")
+                                    send_some_msg(user_id, "Лицо не найдено! Пожалуйста, используйте другое фото.")
+                                    delete_client_request_complete(client_request, input_photo_path)
+                                    complete = True
+                                    delete_messages_from_chat()
 
-                                time.sleep(delay)
-                                break
+                                    last_time = datetime.now()
+                                    break
+                                elif "Timeout" in message.text and "not recognized":
+                                    send_some_msg(user_id, "Невозможно выполнить запрос, произошел программный сбой.")
+                                    delete_client_request_complete(client_request, input_photo_path)
+                                    complete = True
+                                    delete_messages_from_chat()
 
-                            """Условия для обработки ошибки"""
-                            if "not found" in message.text:
-                                send_some_msg(user_id, "Лицо не найдено! Пожалуйста, используйте другое фото.")
-                                delete_client_request_complete(client_request, input_photo_path)
+                                    last_time = datetime.now()
+                                    break
+                            if message.media and stage == "get_photo":
+                                app_telegram.download_media(message.photo, output_photo_path)
+                                cut_photo_2(output_photo_path)
+                                upload_image = vk_upload.photo_messages(photos=output_photo_path)[
+                                    0]  # загружаем файл на сервер
+                                owner_id = upload_image['owner_id']
+                                photo_id = upload_image['id']
+                                access_key = upload_image['access_key']
+                                attachment = f'photo{owner_id}_{photo_id}_{access_key}'
+                                send_some_msg(user_id, "Результат: ", attachment)  # отправляем сообщение с вложением
+
+                                delete_client_request_complete(client_request, input_photo_path, output_photo_path)
                                 complete = True
+
                                 delete_messages_from_chat()
 
                                 last_time = datetime.now()
-                                break
-                            elif "Timeout" in message.text and "not recognized":
-                                send_some_msg(user_id, "Невозможно выполнить запрос, произошел программный сбой.")
-                                delete_client_request_complete(client_request, input_photo_path)
-                                complete = True
-                                delete_messages_from_chat()
+            time.sleep(1)
 
-                                last_time = datetime.now()
-                                break
-                        if message.media and stage == "get_photo":
-                            app_telegram.download_media(message.photo, output_photo_path)
-                            cut_photo_2(output_photo_path)
-                            upload_image = vk_upload.photo_messages(photos=output_photo_path)[
-                                0]  # загружаем файл на сервер
-                            owner_id = upload_image['owner_id']
-                            photo_id = upload_image['id']
-                            access_key = upload_image['access_key']
-                            attachment = f'photo{owner_id}_{photo_id}_{access_key}'
-                            send_some_msg(user_id, "Результат: ", attachment)  # отправляем сообщение с вложением
-
-                            delete_client_request_complete(client_request, input_photo_path, output_photo_path)
-                            complete = True
-
-                            delete_messages_from_chat()
-
-                            last_time = datetime.now()
-        time.sleep(1)
-
-        """В 11 часов удаляем все запросы, которые храняться более 5 часов"""
-        now = datetime.now()
-        if now.hour == 23 and not is_client_delete:
-            is_client_delete = True
-            for user_id in client_requests:
-                delta = now - client_request.get(user_id).get("date_create")
-                if delta.hour > 5:
-                    delete_client_request(client_request)
-        if now.hour != 23:
-            is_client_delete = False
+            """В 11 часов удаляем все запросы, которые храняться более 5 часов"""
+            now = datetime.now()
+            if now.hour == 23 and not is_client_delete:
+                is_client_delete = True
+                for user_id in client_requests:
+                    delta = now - client_request.get(user_id).get("date_create")
+                    if delta.hour > 5:
+                        delete_client_request(client_request)
+            if now.hour != 23:
+                is_client_delete = False
+    except Exception:
+        print("Переподключение telegram_side")
+        time.sleep(60)
 
 run_telegram_side()
