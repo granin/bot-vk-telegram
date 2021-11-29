@@ -350,6 +350,7 @@ def vk_side():
                                                                       config.not_recognized,
                                                                       keyboard=get_keyboard_strength())
                                             else:
+                                                is_choice = False
                                                 if msg_text == choice_list[0]:
                                                     new_data = client_requests.get(user_id)
                                                     new_data["choice"] = "change_race"
@@ -427,8 +428,8 @@ def run_telegram_side():
                         break
                     """Запросы на новые сообщения"""
                     for message in app_telegram.iter_history(chat_name, limit=4):
-                        print(series)
-                        print(stage)
+                        print("серия запроса " + str(series))
+                        print("стадия оброботки " + str(stage))
                         series += 1
                         if message.from_user.username == chat_name:
                             if not message.media:
