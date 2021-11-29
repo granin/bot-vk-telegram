@@ -74,7 +74,7 @@ class Worker:
         chrome_options.add_argument("--no-sandbox")  # linux only
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("user-data-dir=SeleniumProfile/")
-        driver = Chrome(options=chrome_options, executable_path="/home/elliot/test/depoy/chromedriver/chromedriver")
+        driver = Chrome(options=chrome_options, executable_path="/home/ell/bot-vk/chromedriver/chromedriver")
         print('Переходим на сайт')
         driver.get('https://twinstrangers.net/')
         time.sleep(2)
