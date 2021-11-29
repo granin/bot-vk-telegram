@@ -28,12 +28,8 @@ print("spider-man")
 """Смена расы"""
 race_list = ["Asia", "Africa", "Europe", "India"]
 race_list_rus = ["Азия", "Африка", "Европа", "Индия"]
-
 strength_list = ["Weak", "Normal", "Strong"]
 strength_list_rus = ["Слабый", "Нормальный", "Сильный"]
-
-directory_input = "input/"
-directory_output = "output/"
 
 
 """Найди клона"""
@@ -260,14 +256,12 @@ def vk_side():
                                 if attach_type == 'photo':
                                     img_id = attach
                                     name_img = str(img_id) + ".jpg"
-                                    client_requests = {
-                                        user_id: {
+                                    client_requests[user_id] = {
                                             "stage": "choice",
                                             "date_create": datetime.now(),
                                             "photo_url": photo_url,
                                             "photo_path": name_img
                                         }
-                                    }
                                     send_some_msg(user_id, config.select_action, keyboard=get_keyboard_choice())
                                 else:
                                     if user_id in client_requests:
@@ -327,7 +321,7 @@ def vk_side():
                                                         photo_url = client_requests.get(user_id).get("photo_url")
                                                         file = requests.get(photo_url)
                                                         name_img = client_requests.get(user_id).get("photo_path")
-                                                        out = open(directory_input + name_img, "wb")
+                                                        out = open(config.directory_input + name_img, "wb")
                                                         out.write(file.content)
                                                         out.close()
 
@@ -343,14 +337,14 @@ def vk_side():
                                                             user_id)  # Удаляем запрос клиента из списка не законченных
 
                                                         """Показываем очередь"""
-                                                        num = 1
+                                                        num = 0
+                                                        index = 0
                                                         for i in client_requests_complete:
                                                             if i.get("user_id") == user_id:
-                                                                send_some_msg(user_id,
-                                                                              config.request_ok + str(
-                                                                                  len(client_requests_complete) + 1 - num))
-                                                                break
-                                                            num += 1
+                                                                num = index
+                                                            index += 1
+                                                        send_some_msg(user_id,
+                                                                      config.request_ok + str(num+1))
                                                     else:
                                                         send_some_msg(user_id,
                                                                       config.not_recognized,
@@ -413,8 +407,8 @@ def run_telegram_side():
                 strength = client_request.get("strength")
 
                 img_name = client_request.get("photo_path")
-                input_photo_path = directory_input + img_name  # конечный путь до входного файла
-                output_photo_path = directory_output + img_name  # конечный путь до выходного файла
+                input_photo_path = config.directory_input + img_name  # конечный путь до входного файла
+                output_photo_path = config.directory_output + img_name  # конечный путь до выходного файла
                 app_telegram.send_photo(chat_name, input_photo_path)  # отправляем фото боту
 
                 time.sleep(delay)
@@ -492,23 +486,29 @@ def run_telegram_side():
                                 last_time = datetime.now()
             time.sleep(1)
 
-            """В 11 часов удаляем все запросы, которые храняться более 5 часов"""
+            """В config.time_clean часов удаляем все запросы, которые храняться более 5 часов"""
             now = datetime.now()
-            if now.hour == 23 and not is_client_delete:
+            if now.hour == config.time_clean and not is_client_delete:
                 is_client_delete = True
                 for user_id in client_requests:
                     delta = now - client_request.get(user_id).get("date_create")
                     if delta.hour > 5:
                         delete_client_request(client_request)
-            if now.hour != 23:
+            if now.hour != config.time_clean:
                 is_client_delete = False
     except Exception as e:
         print(e)
         print("Переподключение telegram_side")
-        if len(client_requests_complete) != 0:
-            send_some_msg(user_id,config.error)
-            delete_client_request_complete(client_request, input_photo_path)
-            complete = True
+        try:
+            if len(client_requests_complete) != 0:
+                for client in client_requests_complete:
+                    user_id = client.get("user_id")
+                    send_some_msg(user_id,config.error)
+                delete_client_request_complete(client_request, input_photo_path)
+                complete = True
+        except Exception as e:
+            print(e)
+            client_requests_complete = []
         time.sleep(30)
 
 
