@@ -1,5 +1,5 @@
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
-import access2 as access
+import access as access
 
 chat_name = access.chat_name
 my_name = access.my_name
