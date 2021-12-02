@@ -25,19 +25,7 @@ import config
 print("spider-man")
 
 
-"""Смена расы"""
-race_list = ["Asia", "Africa", "Europe", "India"]
-race_list_rus = ["Азия", "Африка", "Европа", "Индия"]
-strength_list = ["Weak", "Normal", "Strong"]
-strength_list_rus = ["Слабый", "Нормальный", "Сильный"]
-
-
-"""Найди клона"""
-sex_list = ["Мужской", "Женский"]
-
-
 """Запросы клиентов"""
-choice_list = ["Смена расы", "Найти своего двойника"]
 client_requests = {}
 client_requests_complete = []  # Массив где содержаться user_id с заполненными параметрами
 
@@ -59,9 +47,10 @@ vk_session = vk_api.VkApi(token=token)
 sesstion_api = vk_session.get_api()
 vk_upload = VkUpload(vk_session)
 longpool = VkLongPoll(vk_session)
-key_color_1 = "positive"
+
 
 def clear_mem():
+    pass
     os.system('killall -9 chromedriver')
     os.system('killall -9 /opt/google/chrome/chrome')
 
@@ -98,10 +87,52 @@ class Queue:
 queue = Queue()
 queue.start()
 
-"""Переводит русские сообщения в английские"""
-def translate_message_to_eng(text, rus_list, eng_list):
-    index = rus_list.index(text)
-    return eng_list[index]
+
+"""Получить имя отправителя"""
+def get_name(user_id):
+    user = vk_session.method("users.get", {"user_ids": user_id})
+    out = user
+    return out
+
+def is_donut_group(user_id):
+    out = False
+    don_list = sesstion_api.groups.getMembers(group_id=config.group_id, filter="donut")
+    if user_id in don_list["items"]:
+        out = True
+    return out
+"""Если пользователь задонатил"""
+def is_donut(user_id):
+    out = False
+    user_id = str(user_id)
+    file = open(config.directory_user_donut, "r")
+    for line in file:
+        if user_id in line:
+            out = True
+    file.close
+    return out
+
+"""Удаление из списка юзеров кому предоставлен полный доступ"""
+def remove_donut(user_id):
+    user_id = str(user_id)
+    file = open(config.directory_user_donut, "r")
+    lines = file.readlines()
+    file.close
+    file = open(config.directory_user_donut, "w")
+    for line in lines:
+        if not user_id in line:
+            file.write(line)
+    file.close
+
+
+def remove_all_donut():
+    f = open(config.directory_user_donut, 'w')
+    f.close()
+
+"""Добавить юзера в список юзеров кому предоставлен полный доступ"""
+def add_donut(user_id):
+    file = open(config.directory_user_donut, "a")
+    file.write(str(user_id)+"\n" )
+    file.close
 
 
 def get_largest_photo(sizes):
@@ -129,7 +160,7 @@ def cut_photo_2(path):
 
 
 """Отправить сообщение"""
-def send_some_msg(user_id, some_text, attachments=None, keyboard=None):
+def send_some_msg(user_id, some_text, attachments=None, keyboard=None, forward_messages=None, reply_to = None):
     post = {
         "user_id": user_id,
         "message": some_text,
@@ -139,6 +170,11 @@ def send_some_msg(user_id, some_text, attachments=None, keyboard=None):
         post["keyboard"] = keyboard.get_keyboard()
     if attachments != None:
         post["attachment"] = attachments
+    if forward_messages != None:
+        post["forward_messages"] = forward_messages
+
+    if reply_to != None:
+        post["reply_to"] = reply_to
     vk_session.method("messages.send", post)
 
 
@@ -156,51 +192,6 @@ def get_url(id, id_message):
                     max_size = size.get("height") + size.get("width")
                     url = size.get("url")
     return url
-
-
-"""Получить клавиатуру с одной кнопкой отмены"""
-def get_keyboard_cancel():
-    keyboard = VkKeyboard(one_time=True)
-    keyboard.add_button(label="Отмена", color="negative")
-    return keyboard
-
-
-"""Получить клавиатуру для выбора действия"""
-def get_keyboard_choice():
-    keyboard = VkKeyboard(one_time=True)
-    for i in choice_list:
-        keyboard.add_button(label=i, color=key_color_1)
-    return keyboard
-
-
-"""Получить клавиатуру для выбора расы"""
-def get_keyboard_race():
-    keyboard = VkKeyboard(one_time=True)
-    for i in race_list_rus:
-        keyboard.add_button(label=i, color=key_color_1)
-    keyboard.add_line()
-    keyboard.add_button(label="Отмена", color="negative")
-    return keyboard
-
-
-"""Получить клавиатуру для выбора силы расы"""
-def get_keyboard_strength():
-    keyboard = VkKeyboard(one_time=True)
-    for i in strength_list_rus:
-        keyboard.add_button(label=i, color=key_color_1)
-    keyboard.add_line()
-    keyboard.add_button(label="Отмена", color="negative")
-    return keyboard
-
-
-"""Получить клавиатуру для выбора пола"""
-def get_keyboard_sex():
-    keyboard = VkKeyboard(one_time=True)
-    for i in sex_list:
-        keyboard.add_button(label=i, color=key_color_1)
-    keyboard.add_line()
-    keyboard.add_button(label="Отмена", color="negative")
-    return keyboard
 
 
 """Функция удаляет не законченый процесс пользователя"""
@@ -239,141 +230,248 @@ def vk_side():
             for event in longpool.listen():
                 if event.type == VkEventType.MESSAGE_NEW:
                     if not event.from_chat:
-                        if event.to_me:
-                            user_id = event.user_id
+                        try:
                             msg_text = event.text
                             msg_id = event.message_id
-                            is_member = sesstion_api.groups.isMember(group_id=group_id, user_id=user_id)
-                            attach = event.attachments.get("attach1")
-                            attach_type = event.attachments.get("attach1_type")
-                            photo_url = get_url(attach, msg_id)
-                            if not is_member:
-                                send_some_msg(user_id,
-                                              config.not_subscribed)
-                            else:
-                                print("Новое сообщение vk_side")
-                                """Если прислано фото, возвращаемся к начальной стадии"""
-                                if attach_type == 'photo':
-                                    img_id = attach
-                                    name_img = str(img_id) + ".jpg"
-                                    client_requests[user_id] = {
-                                            "stage": "choice",
-                                            "date_create": datetime.now(),
-                                            "photo_url": photo_url,
-                                            "photo_path": name_img
-                                        }
-                                    send_some_msg(user_id, config.select_action, keyboard=get_keyboard_choice())
-                                else:
-                                    if user_id in client_requests:
-                                        if msg_text == "Отмена":
-                                            delete_client_request(user_id)
-                                            send_some_msg(user_id, config.send_photo)
-                                        else:
-                                            """Проверяем какое действие выбрал клиент"""
-                                            if client_requests.get(user_id).get("choice") == "find_clone":
-                                                if client_requests.get(user_id).get("stage") == "sex":
-                                                    year = re.search(r'\d\d\d\d', msg_text)
-                                                    if year:
-                                                        year = int(year.group(0))
-                                                    else:
-                                                        year = 1990
-                                                    sex = None
-                                                    male_patterns = [r'^М$', r'^М\s', r'\sМ$']
-                                                    male_patterns.append(sex_list[0])
-                                                    female_patterns = [r'^Ж$', r'^Ж\s', r'\sЖ$', r'^Д$', r'^Д\s',
-                                                                       r'\sД$']
-                                                    female_patterns.append(sex_list[1])
-                                                    for i in male_patterns:
-                                                        if re.search(i, msg_text):
-                                                            sex = 'm'
-                                                            break
-                                                    for i in female_patterns:
-                                                        if re.search(i, msg_text):
-                                                            sex = 'f'
-                                                            break
-                                                    if not sex:
-                                                        send_some_msg(user_id,
-                                                                      config.set_sex)
-                                                    else:
-                                                        photo_url = client_requests.get(user_id).get("photo_url")
-                                                        send_some_msg(user_id,
-                                                                      config.request_ok + str(len(queue.queue) + 1))
-                                                        w = Worker(sesstion_api, user_id, photo_url, sex, year)
-                                                        queue.add_queue(w)
-                                                        delete_client_request(user_id)
-                                            elif client_requests.get(user_id).get("choice") == "change_race":
-                                                """"Проверяем на каком этапе находиться клиент"""
-                                                if client_requests.get(user_id).get("stage") == "race":
-                                                    if msg_text in race_list_rus:
-                                                        new_data = client_requests.get(user_id)
-                                                        new_data["stage"] = "strength"
-                                                        new_data["race"] = race_list[race_list_rus.index(msg_text)]
-                                                        client_requests[user_id] = new_data
-                                                        send_some_msg(user_id, config.set_strength,
-                                                                      keyboard=get_keyboard_strength())
-                                                    else:
-                                                        send_some_msg(user_id,
-                                                                      config.not_recognized,
-                                                                      keyboard=get_keyboard_race())
-                                                elif client_requests.get(user_id).get("stage") == "strength":
-                                                    if msg_text in strength_list_rus:
-                                                        """Скачиваем отправленную фотографию"""
-                                                        photo_url = client_requests.get(user_id).get("photo_url")
-                                                        file = requests.get(photo_url)
-                                                        name_img = client_requests.get(user_id).get("photo_path")
-                                                        out = open(config.directory_input + name_img, "wb")
-                                                        out.write(file.content)
-                                                        out.close()
-
-                                                        """Добавляем данные"""
-                                                        new_data = client_requests.get(user_id)
-                                                        new_data["stage"] = "complete"
-                                                        new_data["strength"] = strength_list[
-                                                            strength_list_rus.index(msg_text)]
-                                                        new_data["user_id"] = user_id
-                                                        client_requests_complete.append(
-                                                            new_data)  # Добавляем запрос клиента в список законченных запросов
-                                                        delete_client_request(
-                                                            user_id)  # Удаляем запрос клиента из списка не законченных
-
-                                                        """Показываем очередь"""
-                                                        num = 0
-                                                        index = 0
-                                                        for i in client_requests_complete:
-                                                            if i.get("user_id") == user_id:
-                                                                num = index
-                                                            index += 1
-                                                        send_some_msg(user_id,
-                                                                      config.request_ok + str(num+1))
-                                                    else:
-                                                        send_some_msg(user_id,
-                                                                      config.not_recognized,
-                                                                      keyboard=get_keyboard_strength())
-                                            else:
-                                                is_choice = False
-                                                if msg_text == choice_list[0]:
-                                                    new_data = client_requests.get(user_id)
-                                                    new_data["choice"] = "change_race"
-                                                    new_data["stage"] = "race"
-                                                    new_data["category"] = "Race"
-                                                    client_requests[user_id] = new_data
-                                                    send_some_msg(user_id, config.set_race,
-                                                                  keyboard=get_keyboard_race())
-                                                    is_choice = True
-                                                if msg_text == choice_list[1]:
-                                                    new_data = client_requests.get(user_id)
-                                                    new_data["choice"] = "find_clone"
-                                                    new_data["stage"] = "sex"
-                                                    client_requests[user_id] = new_data
-                                                    send_some_msg(user_id,
-                                                                  config.set_sex,
-                                                                  keyboard=get_keyboard_sex())
-                                                    is_choice = True
-                                                if not is_choice:
-                                                    send_some_msg(user_id, config.select_action,
-                                                                  keyboard=get_keyboard_choice())
+                            if event.to_me:
+                                    config.get_keyboard_contact_and_level()
+                                    user_id = event.user_id
+                                    member_id = get_name(user_id)
+                                    msg_text = event.text
+                                    msg_id = event.message_id
+                                    is_member = sesstion_api.groups.isMember(group_id=group_id, user_id=user_id)
+                                    attach = event.attachments.get("attach1")
+                                    attach_type = event.attachments.get("attach1_type")
+                                    photo_url = get_url(attach, msg_id)
+                                    if not is_member:
+                                        send_some_msg(user_id,
+                                                      config.not_subscribed)
                                     else:
-                                        send_some_msg(user_id, config.send_photo)
+                                        print("Новое сообщение vk_side")
+                                        """Если прислано фото, возвращаемся к начальной стадии"""
+                                        if attach_type == 'photo':
+                                            img_id = attach
+                                            name_img = str(img_id) + ".jpg"
+                                            client_requests[user_id] = {
+                                                    "stage": "choice",
+                                                    "date_create": datetime.now(),
+                                                    "photo_url": photo_url,
+                                                    "photo_path": name_img
+                                                }
+                                            send_some_msg(user_id, config.select_action, keyboard=config.get_keyboard_choice())
+                                        elif msg_text in config.contact_clone_text:
+                                            """Если пользователь хочет связаться с двойником"""
+                                            send_some_msg(user_id, config.accept_response_text)
+                                            for admin in config.admins_list:
+                                                send_some_msg(admin, "Пользователь ждет ответа администратора.",
+                                                              forward_messages=msg_id)
+                                        elif msg_text in config.buy_advanced_level_text:
+                                            """Если пользователь хочет купить полный доступ"""
+                                            msg_text.replace(config.pattern_user_help, "")
+                                            msg_text.replace(" ", "")
+                                            send_some_msg(user_id, config.how_get_advance_level_text, keyboard=config.get_keyboard_buy_advance_level())
+                                        elif msg_text in config.buy_methods_list:
+                                            """Каким способ пользователь хочет купить полный доступ"""
+                                            if msg_text == config.buy_methods_list[1]:
+                                                send_some_msg(user_id, config.accept_response_text)
+                                                for admin in config.admins_list:
+                                                    send_some_msg(admin, "Пользователь c user_id " + str(user_id)+ " хочет приобрести полный доступ.\n\nЧтобы предоставить пользователю полный доступ отправьте команду /add-user user_id.",
+                                                                  forward_messages=msg_id)
+                                            if msg_text == config.buy_methods_list[0]:
+                                                pass
+                                        elif "/" == msg_text[0]:
+                                            """Если сообщение содержит команду"""
+                                            if user_id in config.admins_list:
+                                                if config.pattern_admin_add_donut in msg_text:
+                                                    add_user_id = msg_text.replace(config.pattern_admin_add_donut, "")
+                                                    add_user_id = add_user_id.replace(" ", "")
+                                                    try:
+                                                        send_some_msg(add_user_id,
+                                                                      "Пользователь " + str(add_user_id) + " получил полный доступ.")
+                                                        send_some_msg(user_id, "Пользователь " + str(add_user_id) + " получил полный доступ.")
+                                                        add_donut(str(user_id))
+                                                    except Exception as e:
+                                                        print(e)
+                                                        send_some_msg(user_id,
+                                                                      "Пользователь " + str(add_user_id) + " не найден.")
+
+                                                elif config.pattern_admin_remove_all in msg_text:
+                                                    remove_all_donut()
+                                                    send_some_msg(user_id, config.admin_remove_all_text)
+                                            else:
+                                                if config.pattern_user_help in msg_text:
+                                                    msg_text.replace(config.pattern_user_help, "")
+                                                    msg_text.replace(" ", "")
+                                                    send_some_msg(user_id, config.accept_response_text)
+                                                    for admin in config.admins_list:
+                                                        send_some_msg(admin, "Пользователь ждет ответа администратора.", forward_messages=msg_id)
+                                                else:
+                                                    send_some_msg(user_id, config.not_recognized,
+                                                                  forward_messages=msg_id)
+
+                                        else:
+                                            if user_id in client_requests:
+                                                if msg_text == "Отмена":
+                                                    delete_client_request(user_id)
+                                                    send_some_msg(user_id, config.send_photo)
+                                                else:
+                                                    """Проверяем какое действие выбрал клиент"""
+                                                    if client_requests.get(user_id).get("choice") == "find_clone":
+                                                        if client_requests.get(user_id).get("stage") == "level":
+                                                            if msg_text == config.level_find_clone_list[0]:
+                                                                new_data = client_requests.get(user_id)
+                                                                new_data["stage"] = "sex"
+                                                                client_requests[user_id] = new_data
+                                                                send_some_msg(user_id, config.set_sex,
+                                                                              keyboard=config.get_keyboard_sex())
+                                                            elif msg_text == config.level_find_clone_list[1]:
+                                                                new_data = client_requests.get(user_id)
+                                                                new_data["stage"] = "pay"
+                                                                client_requests[user_id] = new_data
+                                                                send_some_msg(user_id, config.set_pay,
+                                                                              keyboard=config.get_keyboard_pay())
+                                                            else:
+                                                                send_some_msg(user_id,
+                                                                              config.not_recognized,
+                                                                              keyboard=get_keyboard_level())
+                                                        elif client_requests.get(user_id).get("stage") == "pay":
+
+                                                            new_data = client_requests.get(user_id)
+                                                            new_data["stage"] = "sex"
+                                                            client_requests[user_id] = new_data
+                                                            send_some_msg(user_id, config.set_race,
+                                                                          keyboard=config.get_keyboard_sex())
+                                                        elif client_requests.get(user_id).get("stage") == "sex":
+                                                            donut = False
+                                                            momentary = False # дается ли полный доступ на один запрос
+                                                            """Проверяем находиться ли пользователь в списке donut_users"""
+                                                            if is_donut(user_id):
+                                                                donut = True
+                                                                remove_donut(user_id)
+                                                                momentary = True
+                                                            if is_donut_group(user_id):
+                                                                donut = True
+                                                            year = re.search(r'\d\d\d\d', msg_text)
+                                                            if year:
+                                                                year = int(year.group(0))
+                                                            else:
+                                                                year = 1990
+                                                            sex = None
+                                                            male_patterns = [r'^М$', r'^М\s', r'\sМ$']
+                                                            male_patterns.append(config.sex_list[0])
+                                                            female_patterns = [r'^Ж$', r'^Ж\s', r'\sЖ$', r'^Д$', r'^Д\s',
+                                                                               r'\sД$']
+                                                            female_patterns.append(config.sex_list[1])
+                                                            for i in male_patterns:
+                                                                if re.search(i, msg_text):
+                                                                    sex = 'm'
+                                                                    break
+                                                            for i in female_patterns:
+                                                                if re.search(i, msg_text):
+                                                                    sex = 'f'
+                                                                    break
+                                                            if not sex:
+                                                                send_some_msg(user_id,
+                                                                              config.set_sex)
+                                                            else:
+                                                                photo_url = client_requests.get(user_id).get("photo_url")
+                                                                if donut == True:
+                                                                    send_some_msg(user_id,
+                                                                                  config.donute_text)
+                                                                send_some_msg(user_id,config.request_ok + str(len(queue.queue) + 1))
+                                                                w = Worker(sesstion_api, user_id, photo_url, sex, year, donut=donut, momentary=momentary)
+                                                                queue.add_queue(w)
+                                                                delete_client_request(user_id)
+                                                    elif client_requests.get(user_id).get("choice") == "change_race":
+                                                        """"Проверяем на каком этапе находиться клиент"""
+                                                        if client_requests.get(user_id).get("stage") == "race":
+                                                            if msg_text in config.race_list_rus:
+                                                                new_data = client_requests.get(user_id)
+                                                                new_data["stage"] = "strength"
+                                                                new_data["race"] = config.race_list[config.race_list_rus.index(msg_text)]
+                                                                client_requests[user_id] = new_data
+                                                                send_some_msg(user_id, config.set_strength,
+                                                                              keyboard=config.get_keyboard_strength())
+                                                            else:
+                                                                send_some_msg(user_id,
+                                                                              config.not_recognized,
+                                                                              keyboard=config.get_keyboard_race())
+                                                        elif client_requests.get(user_id).get("stage") == "strength":
+                                                            if msg_text in config.strength_list_rus:
+                                                                """Скачиваем отправленную фотографию"""
+                                                                photo_url = client_requests.get(user_id).get("photo_url")
+                                                                file = requests.get(photo_url)
+                                                                name_img = client_requests.get(user_id).get("photo_path")
+                                                                out = open(config.directory_input + name_img, "wb")
+                                                                out.write(file.content)
+                                                                out.close()
+
+                                                                """Добавляем данные"""
+                                                                new_data = client_requests.get(user_id)
+                                                                new_data["stage"] = "complete"
+                                                                new_data["strength"] = config.strength_list[
+                                                                    config.strength_list_rus.index(msg_text)]
+                                                                new_data["user_id"] = user_id
+                                                                client_requests_complete.append(
+                                                                    new_data)  # Добавляем запрос клиента в список законченных запросов
+                                                                delete_client_request(
+                                                                    user_id)  # Удаляем запрос клиента из списка не законченных
+
+                                                                """Показываем очередь"""
+                                                                num = 0
+                                                                index = 0
+                                                                for i in client_requests_complete:
+                                                                    if i.get("user_id") == user_id:
+                                                                        num = index
+                                                                    index += 1
+                                                                send_some_msg(user_id,
+                                                                              config.request_ok + str(num+1))
+                                                            else:
+                                                                send_some_msg(user_id,
+                                                                              config.not_recognized,
+                                                                              keyboard=config.get_keyboard_strength())
+                                                    else:
+                                                        is_choice = False
+                                                        if msg_text == config.choice_list[0]:
+                                                            new_data = client_requests.get(user_id)
+                                                            new_data["choice"] = "change_race"
+                                                            new_data["stage"] = "race"
+                                                            new_data["category"] = "Race"
+                                                            client_requests[user_id] = new_data
+                                                            send_some_msg(user_id, config.set_race,
+                                                                          keyboard=config.get_keyboard_race())
+                                                            is_choice = True
+                                                        if msg_text == config.choice_list[1]:
+                                                            new_data = client_requests.get(user_id)
+                                                            new_data["choice"] = "find_clone"
+                                                            new_data["stage"] = "sex"
+                                                            client_requests[user_id] = new_data
+                                                            send_some_msg(user_id,
+                                                                          config.set_sex,
+                                                                          keyboard=config.get_keyboard_sex())
+                                                            is_choice = True
+                                                        if not is_choice:
+                                                            send_some_msg(user_id, config.select_action,
+                                                                          keyboard=config.get_keyboard_choice())
+                                            else:
+                                                send_some_msg(user_id, config.send_photo)
+                            else:
+                                if config.pattern_admin_add_donut in msg_text:
+                                    add_user_id = msg_text.replace(config.pattern_admin_add_donut, "")
+                                    add_user_id = add_user_id.replace(" ", "")
+                                    try:
+                                        send_some_msg(add_user_id,
+                                                      "Пользователь " + str(add_user_id) + " получил полный доступ.")
+                                        for admin in config.admins_list:
+                                            send_some_msg(admin,
+                                                          "Пользователь " + str(add_user_id) + " получил полный доступ.")
+                                        add_donut(str(user_id))
+                                    except Exception as e:
+                                        print(e)
+
+                        except Exception as e:
+                            print(e)
+
         except Exception as e:
             print(e)
             print("Переподключение vk_side")

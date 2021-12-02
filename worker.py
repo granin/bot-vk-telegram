@@ -4,24 +4,33 @@ import requests, time, os, random
 from vk_api import VkUpload
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from PIL import Image
+import config
 
 
 final_message = """Если не получилось найти похожего на Вас человека, то загрузите фото в другом ракурсе. \\n\\nЕсли Вас заинтересовало фото, то напишите нам и мы вам скажем как с этим человеком связаться\\n\\nУ нас есть еще больше результатов для Вас! Получите их, приобретя полный доступ:\\nСтоимость 50₽ (более 100 фотографий похожих на вас людей со всего мира )"""
 
-def get_keyboard_choice():
-    keyboard = VkKeyboard(one_time=True)
-    choice_list = ["Смена расы", "Найти своего двойника"]
-    for i in choice_list:
-        keyboard.add_button(label=i, color="secondary")
-    return keyboard
+
+def cut_list(list):
+    output = []
+    last = 6
+    i = 1
+    while i <= len(list)/last:
+        b = list[last*(i-1):last*i]
+        output.append(b)
+        i +=1
+    return output
+
 
 class Worker:
-    def __init__(self, api, uid, photo_url, sex, year=1990):
+    def __init__(self, api, uid, photo_url, sex, year=1990, donut=False, momentary=False):
         self.api = api
         self.uid = uid
         self.photo_url = photo_url
         self.year = year
         self.sex = sex
+        self.donut = donut
+        self.momentary = momentary
+
 
     def get_random_string(self): return ''.join([random.choice('qwertyuiopasddfhghkjklzxcbnmQWEERYTIUOASFSDHGFKJLZXCVXCNBM') for i in range(12)])
 
@@ -32,7 +41,6 @@ class Worker:
         cropped_example.save(path)
 
     def send_results(self, results):
-        results = results[:6]
         upload = VkUpload(self.api)
         photos = []
         for result in results:
@@ -42,26 +50,42 @@ class Worker:
             self.cut_photo(path)
             photos.append(path)
         print(2, photos)
-        photo_list = upload.photo_messages(photos, self.uid)
+        photo_list = []
+        for i in cut_list(photos):
+            a = upload.photo_messages(i, self.uid)
+            for i in a:
+                photo_list.append(i)
         print(1, photo_list)
         code = ''
-        for j, result in enumerate(results):
+        ind = 0
+        for j, result in enumerate(results[:len(photo_list)]):
             code += 'API.messages.send({"user_id": %s, "message": "%s", "random_id": %s, "attachment": "%s"});\n' % (
                 self.uid, "%s\\n%s" % (result['country'], result['score']), random.randint(1, 10000000000000000),
                 'photo%s_%s' % (photo_list[j]['owner_id'], photo_list[j]['id'])
             )
-        for i in photos: os.remove(i)
-        code += 'API.messages.send({"user_id": %s, "message": "%s", "random_id": %s});\n' % (self.uid, final_message, random.randint(1, 10000000000000000))
+            ind += 1
+            if ind > 15:
+                ind = 0
+                for i in photos:
+                    try:
+                        os.remove(i)
+                    except Exception:
+                        pass
+                self.api.execute(code=code)
+                code = ''
+        code = 'API.messages.send({"user_id": %s, "message": "%s", "random_id": %s});\n' % (
+        self.uid, final_message, random.randint(1, 10000000000000000))
         self.api.execute(code=code)
-        #self.api.messages.send(user_id=self.uid, message="Выберите действие.", random_id=random.randint(1, 10000000000000000), keyboard=get_keyboard_choice().get_keyboard())
-
-
-
+        if self.donut and not momentary:
+            self.api.messages.send(user_id=self.uid, message="Выберите действие.", random_id=random.randint(1, 10000000000000000), keyboard=config.get_keyboard_contact().get_keyboard())
+        else:
+            self.api.messages.send(user_id=self.uid, message="Выберите действие.", random_id=random.randint(1, 10000000000000000), keyboard=config.get_keyboard_contact_and_level().get_keyboard())
 
 
     def start(self):
-        try: self.run()
-        except Exception as e: print(e)
+        #try:
+            self.run()
+        #except Exception as e: print(e)
 
     def not_found(self):
         self.api.messages.send(user_id=self.uid, message="К сожалению, для человека на этой фотографии не нашлось близнецов.\nВозможно, произошел сбой в программе, попробуйте еще раз.", random_id=random.randint(1, 10000000000000000))
@@ -74,7 +98,7 @@ class Worker:
         chrome_options.add_argument("--no-sandbox")  # linux only
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("user-data-dir=SeleniumProfile/")
-        driver = Chrome(options=chrome_options, executable_path="/home/ell/bot-vk/chromedriver/chromedriver")
+        driver = Chrome(options=chrome_options, executable_path=config.driver_path)
         print('Переходим на сайт')
         driver.get('https://twinstrangers.net/')
         time.sleep(2)
@@ -138,15 +162,28 @@ class Worker:
             if cnt == 5: return self.not_found()
         time.sleep(2)
         driver.save_screenshot('a2.png')
-        results = driver.find_elements_by_class_name('rowhld')
-        if not results: return self.not_found()
+        #time.sleep(400)
         output = []
-        for result in results:
-            country = result.find_element_by_xpath(".//img[@class='country']").get_attribute('title')
-            score = result.find_element_by_xpath(".//h2[contains(text(), 'AI Match Score:')]").text
-            score = score.replace('AI Match Score: ', '')
-            photo = result.find_element_by_xpath(".//img[@class='photo']").get_attribute('src')
-            output.append({'country': country, 'score': score, 'photo': photo})
+        page = [1]
+        if self.donut == True:
+            page = [1, 2, 3, 4, 5]
+        for i in page:
+            try:
+                if i != 1:
+                    driver.find_element_by_link_text(str(i)).click()
+                    time.sleep(4)
+                results = driver.find_elements_by_class_name('rowhld')
+                if not results: return self.not_found()
+                else:
+                    for result in results:
+                        country = result.find_element_by_xpath(".//img[@class='country']").get_attribute('title')
+                        score = result.find_element_by_xpath(".//h2[contains(text(), 'AI Match Score:')]").text
+                        score = score.replace('AI Match Score: ', '')
+                        photo = result.find_element_by_xpath(".//img[@class='photo']").get_attribute('src')
+                        output.append({'country': country, 'score': score, 'photo': photo})
+            except Exception as e:
+                print(e)
+                break
         self.send_results(output)
         driver.get("https://twinstrangers.net/profile/unsubscribe")
         driver.refresh()
