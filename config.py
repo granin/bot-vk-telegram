@@ -9,9 +9,9 @@ api_hash = access.api_hash
 directory_input = "/home/ell/bot-vk/input/"
 directory_output = "/home/ell/bot-vk/output/"
 
-directory_user_donut = '/home/elliot/test/depoy/longpool/donut_users'
+directory_user_donut = '/home/ell/bot-vk/donut_users'
 
-driver_path = "chromedriver/chromedriver"
+driver_path = "/home/ell/bot-vk/chromedriver/chromedriver"
 
 token = access.token
 group_id = access.group_id
@@ -53,7 +53,7 @@ strength_list_rus = ["Слабый", "Нормальный", "Сильный"]
 """Найди клона"""
 level_find_clone_list = ['Обычный', 'Продвинутый']
 buy_methods_list = ['Оформить подписку', 'Купить через администратора']
-buy_advanced_level_text = "Купить полный доступ"
+buy_advanced_level_text = "Полный доступ"
 sex_list = ["Мужской", "Женский"]
 set_sex = 'Пожалуйста, укажите ваш пол ("Мужской" - искать близнецов среди мужчин, "Женский" - среди женщин).'
 contact_clone_text = "Связаться с двойником"
@@ -144,7 +144,7 @@ def get_keyboard_contact_and_level():
     keyboard.add_line()
     keyboard.add_button(label=buy_advanced_level_text, color=key_color_1)
     keyboard.add_line()
-    keyboard.add_button(label="Отмена", color="negative")
+    keyboard.add_button(label="Закрыть", color="negative")
     return keyboard
 
 

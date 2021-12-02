@@ -76,16 +76,16 @@ class Worker:
         code = 'API.messages.send({"user_id": %s, "message": "%s", "random_id": %s});\n' % (
         self.uid, final_message, random.randint(1, 10000000000000000))
         self.api.execute(code=code)
-        if self.donut and not momentary:
+        if self.donut and not self.momentary:
             self.api.messages.send(user_id=self.uid, message="Выберите действие.", random_id=random.randint(1, 10000000000000000), keyboard=config.get_keyboard_contact().get_keyboard())
         else:
             self.api.messages.send(user_id=self.uid, message="Выберите действие.", random_id=random.randint(1, 10000000000000000), keyboard=config.get_keyboard_contact_and_level().get_keyboard())
 
 
     def start(self):
-        #try:
+        try:
             self.run()
-        #except Exception as e: print(e)
+        except Exception as e: print(e)
 
     def not_found(self):
         self.api.messages.send(user_id=self.uid, message="К сожалению, для человека на этой фотографии не нашлось близнецов.\nВозможно, произошел сбой в программе, попробуйте еще раз.", random_id=random.randint(1, 10000000000000000))
@@ -171,8 +171,8 @@ class Worker:
             try:
                 if i != 1:
                     driver.find_element_by_link_text(str(i)).click()
-                    time.sleep(4)
                 results = driver.find_elements_by_class_name('rowhld')
+                time.sleep(8)
                 if not results: return self.not_found()
                 else:
                     for result in results:

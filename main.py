@@ -90,8 +90,7 @@ queue.start()
 
 """Получить имя отправителя"""
 def get_name(user_id):
-    user = vk_session.method("users.get", {"user_ids": user_id})
-    out = user
+    out = "[id"+str(user_id)+"|"+str(user_id)+"]"
     return out
 
 def is_donut_group(user_id):
@@ -106,8 +105,10 @@ def is_donut(user_id):
     user_id = str(user_id)
     file = open(config.directory_user_donut, "r")
     for line in file:
+        print(line)
         if user_id in line:
             out = True
+            print("Пользователm в списке")
     file.close
     return out
 
@@ -243,6 +244,7 @@ def vk_side():
                                     attach = event.attachments.get("attach1")
                                     attach_type = event.attachments.get("attach1_type")
                                     photo_url = get_url(attach, msg_id)
+                                    is_donut(user_id)
                                     if not is_member:
                                         send_some_msg(user_id,
                                                       config.not_subscribed)
@@ -261,22 +263,25 @@ def vk_side():
                                             send_some_msg(user_id, config.select_action, keyboard=config.get_keyboard_choice())
                                         elif msg_text in config.contact_clone_text:
                                             """Если пользователь хочет связаться с двойником"""
-                                            send_some_msg(user_id, config.accept_response_text)
+                                            send_some_msg(user_id, config.accept_response_text, keyboard=config.get_keyboard_contact_and_level())
                                             for admin in config.admins_list:
-                                                send_some_msg(admin, "Пользователь ждет ответа администратора.",
+                                                send_some_msg(admin, "Пользователь "+get_name(user_id)+ " ждет ответа администратора.",
                                                               forward_messages=msg_id)
                                         elif msg_text in config.buy_advanced_level_text:
                                             """Если пользователь хочет купить полный доступ"""
                                             msg_text.replace(config.pattern_user_help, "")
                                             msg_text.replace(" ", "")
-                                            send_some_msg(user_id, config.how_get_advance_level_text, keyboard=config.get_keyboard_buy_advance_level())
-                                        elif msg_text in config.buy_methods_list:
-                                            """Каким способ пользователь хочет купить полный доступ"""
-                                            if msg_text == config.buy_methods_list[1]:
-                                                send_some_msg(user_id, config.accept_response_text)
-                                                for admin in config.admins_list:
-                                                    send_some_msg(admin, "Пользователь c user_id " + str(user_id)+ " хочет приобрести полный доступ.\n\nЧтобы предоставить пользователю полный доступ отправьте команду /add-user user_id.",
-                                                                  forward_messages=msg_id)
+                                            send_some_msg(user_id, config.accept_response_text, keyboard=config.get_keyboard_contact_and_level())
+                                            for admin in config.admins_list:
+                                                send_some_msg(admin, "Пользователь c user_id " + str(user_id)+ " хочет приобрести полный доступ.\n\nЧтобы предоставить пользователю полный доступ отправьте команду /add-user user_id.",
+                                                  forward_messages=msg_id)
+                                        #elif msg_text in config.buy_methods_list:
+                                            #"""Каким способ пользователь хочет купить полный доступ"""
+                                            #if msg_text == config.buy_methods_list[1]:
+                                                #send_some_msg(user_id, config.accept_response_text, keyboard=config.get_keyboard_contact_and_level())
+                                                #for admin in config.admins_list:
+                                                    #send_some_msg(admin, "Пользователь c user_id " + str(user_id)+ " хочет приобрести полный доступ.\n\nЧтобы предоставить пользователю полный доступ отправьте команду /add-user user_id.",
+                                                            #      forward_messages=msg_id)
                                             if msg_text == config.buy_methods_list[0]:
                                                 pass
                                         elif "/" == msg_text[0]:
@@ -289,7 +294,7 @@ def vk_side():
                                                         send_some_msg(add_user_id,
                                                                       "Пользователь " + str(add_user_id) + " получил полный доступ.")
                                                         send_some_msg(user_id, "Пользователь " + str(add_user_id) + " получил полный доступ.")
-                                                        add_donut(str(user_id))
+                                                        add_donut(str(add_user_id))
                                                     except Exception as e:
                                                         print(e)
                                                         send_some_msg(user_id,
@@ -304,7 +309,7 @@ def vk_side():
                                                     msg_text.replace(" ", "")
                                                     send_some_msg(user_id, config.accept_response_text)
                                                     for admin in config.admins_list:
-                                                        send_some_msg(admin, "Пользователь ждет ответа администратора.", forward_messages=msg_id)
+                                                        send_some_msg(admin, "Пользователь " + get_name(user_id) + " ждет ответа администратора.", forward_messages=msg_id)
                                                 else:
                                                     send_some_msg(user_id, config.not_recognized,
                                                                   forward_messages=msg_id)
@@ -349,8 +354,11 @@ def vk_side():
                                                                 donut = True
                                                                 remove_donut(user_id)
                                                                 momentary = True
-                                                            if is_donut_group(user_id):
-                                                                donut = True
+                                                            try:
+                                                                if is_donut_group(user_id):
+                                                                    donut = True
+                                                            except Exception:
+                                                                pass
                                                             year = re.search(r'\d\d\d\d', msg_text)
                                                             if year:
                                                                 year = int(year.group(0))
@@ -465,7 +473,7 @@ def vk_side():
                                         for admin in config.admins_list:
                                             send_some_msg(admin,
                                                           "Пользователь " + str(add_user_id) + " получил полный доступ.")
-                                        add_donut(str(user_id))
+                                        add_donut(str(add_user_id))
                                     except Exception as e:
                                         print(e)
 
