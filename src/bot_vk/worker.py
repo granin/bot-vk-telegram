@@ -4,7 +4,7 @@ import requests, time, os, random
 from vk_api import VkUpload
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from PIL import Image
-import config
+from bot_vk import config
 
 
 final_message = """Если не получилось найти похожего на Вас человека, то загрузите фото в другом ракурсе. \\n\\nЕсли Вас заинтересовало фото, то напишите нам и мы вам скажем как с этим человеком связаться\\n\\nУ нас есть еще больше результатов для Вас! Получите их, приобретя полный доступ:\\nСтоимость 50₽ (более 100 фотографий похожих на вас людей со всего мира )"""
