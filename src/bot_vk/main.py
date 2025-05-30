@@ -17,9 +17,9 @@ from PIL import Image
 
 from pyrogram import Client, filters
 
-from worker import Worker
+from bot_vk.worker import Worker
 
-import config
+from bot_vk import config
 
 
 print("spider-man")
